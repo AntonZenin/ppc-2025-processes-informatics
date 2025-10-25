@@ -20,7 +20,7 @@
 
 namespace zenin_a_sum_values_by_columns_matrix {
 
-class ZeninARunFuncTestsProcesses : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
+class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
     return std::to_string(std::get<0>(test_param)) + "_" + std::get<1>(test_param);
@@ -64,7 +64,7 @@ class ZeninARunFuncTestsProcesses : public ppc::util::BaseRunFuncTests<InType, O
 
 namespace {
 
-TEST_P(ZeninARunFuncTestsProcesses, MatmulFromPic) {
+TEST_P(ZeninASumValuesByMatrixFunctTests, MatmulFromPic) {
   ExecuteTest(GetParam());
 }
 
@@ -76,9 +76,9 @@ const auto kTestTasksList =
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = ZeninARunFuncTestsProcesses::PrintFuncTestName<ZeninARunFuncTestsProcesses>;
+const auto kPerfTestName = ZeninASumValuesByMatrixFunctTests::PrintFuncTestName<ZeninASumValuesByMatrixFunctTests>;
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, ZeninARunFuncTestsProcesses, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(PicMatrixTests, ZeninASumValuesByMatrixFunctTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 
