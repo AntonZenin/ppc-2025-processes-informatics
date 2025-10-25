@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
+#include "util/include/perf_test_util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/seq/include/ops_seq.hpp"
-#include "util/include/perf_test_util.hpp"
 
 namespace zenin_a_sum_values_by_columns_matrix {
 
@@ -29,7 +29,8 @@ TEST_P(ZeninASumValuesByMatrixPerfTests, RunPerfModes) {
 }
 
 const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, ZeninASumValuesByColumnsMatrixMPI, ZeninASumValuesByColumnsMatrixSEQ>(PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix);
+    ppc::util::MakeAllPerfTasks<InType, ZeninASumValuesByColumnsMatrixMPI, ZeninASumValuesByColumnsMatrixSEQ>(
+        PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

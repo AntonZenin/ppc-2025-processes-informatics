@@ -5,8 +5,8 @@
 #include <numeric>
 #include <vector>
 
-#include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 #include "util/include/util.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 
 namespace zenin_a_sum_values_by_columns_matrix {
 
