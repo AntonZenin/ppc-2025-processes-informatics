@@ -6,12 +6,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <random>
 
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
@@ -34,20 +34,19 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
 
     int rows, cols;
     if (matrix_size == 3) {
-      rows = 3; cols = 3; //3x3
+      rows = 3;
+      cols = 3;  // 3x3
     } else if (matrix_size == 5) {
-      rows = 5, cols = 3; //5x3
+      rows = 5, cols = 3;  // 5x3
     } else {
-      rows = 2, cols = 7;  
+      rows = 2, cols = 7;
     }
 
-
-  
     input_data_ = std::make_tuple(rows, cols, std::vector<int>());
     expected_result_.clear();
     expected_result_.resize(cols, 0);
 
-    auto& matrix_data = std::get<2>(input_data_);
+    auto &matrix_data = std::get<2>(input_data_);
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dis(1, 50);
@@ -58,7 +57,6 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
         expected_result_[j] += value;
       }
     }
-    
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
@@ -80,7 +78,8 @@ TEST_P(ZeninASumValuesByMatrixFunctTests, SumByColumnsTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3x3 matrix"), std::make_tuple(5, "5x3 matrix"), std::make_tuple(7, "2x7 matrix")};
+const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3x3 matrix"), std::make_tuple(5, "5x3 matrix"),
+                                            std::make_tuple(7, "2x7 matrix")};
 
 const auto kTestTasksList = std::tuple_cat(ppc::util::AddFuncTask<ZeninASumValuesByColumnsMatrixMPI, InType>(
                                                kTestParam, PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix),

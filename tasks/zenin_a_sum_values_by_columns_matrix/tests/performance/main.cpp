@@ -15,7 +15,6 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     std::vector<std::pair<int, int>> test_sizes = {{10, 15}, {20, 5}, {8, 25}};
     auto [rows, cols] = test_sizes[std::rand() % test_sizes.size()];
 
-
     input_data_ = std::make_tuple(rows, cols, std::vector<int>());
     expected_result_.clear();
     expected_result_.resize(matrix_size, 0);
