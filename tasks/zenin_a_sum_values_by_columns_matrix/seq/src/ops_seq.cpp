@@ -3,6 +3,7 @@
 #include <numeric>
 #include <vector>
 
+
 #include "util/include/util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 
@@ -11,50 +12,70 @@ namespace zenin_a_sum_values_by_columns_matrix {
 ZeninASumValuesByColumnsMatrixSEQ::ZeninASumValuesByColumnsMatrixSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
-  GetOutput() = 0;
+  GetOutput() = OutType{};
 }
 
 bool ZeninASumValuesByColumnsMatrixSEQ::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
-}
+  const auto& input = GetInput();
 
-bool ZeninASumValuesByColumnsMatrixSEQ::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
-}
+  int rows = std::get<0>(input);
+  int cols = std::get<1>(input);
+  const auto& matrix_data = std::get<2>(input);
 
-bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
-  if (GetInput() == 0) {
+  if (rows <= 0 || cols <= 0) {
     return false;
   }
 
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
-      }
+  int expected_size = rows * cols;
+
+  if(matrix_data.size() != expected_size) {
+    return false;
+  }
+  return true;
+  
+}
+
+bool ZeninASumValuesByColumnsMatrixSEQ::PreProcessingImpl() {
+  const auto& input = GetInput();
+  int rows = std::get<0>(input);
+  int cols = std::get<1>(input);
+  const auto& matrix_data = std::get<2>(input); 
+  return true;
+}
+
+bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
+  const auto& input = GetInput();
+  int rows = std::get<0>(input);
+  int cols = std::get<1>(input);
+  const auto& matrix_data = std::get<2>(input);
+
+  OutType result(cols, 0); 
+
+  for (int row = 0; row < rows; ++row) {
+    for (int col = 0; col < cols; ++col) {
+      int index = row * cols + col;
+      result[col] += matrix_data[index];
     }
   }
-
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
-
-  int counter = 0;
-  for (int i = 0; i < num_threads; i++) {
-    counter++;
-  }
-
-  if (counter != 0) {
-    GetOutput() /= counter;
-  }
-  return GetOutput() > 0;
+  GetOutput() = result;
+  return true;
 }
 
 bool ZeninASumValuesByColumnsMatrixSEQ::PostProcessingImpl() {
-  GetOutput() -= GetInput();
-  return GetOutput() > 0;
+  auto& output = GetOutput();
+
+  if(output.empty()) {
+    return false;
+  }
+
+  std::cout << "Postprocessing: Column sums = [";
+  for (size_t i = 0; i < output.size(); ++i) {
+    std::cout << output[i];
+    if (i < output.size() - 1) std::cout << ", ";
+  }
+  std::cout << "]" << std::endl;
+  return true;
+  
 }
 
 }  // namespace zenin_a_sum_values_by_columns_matrix

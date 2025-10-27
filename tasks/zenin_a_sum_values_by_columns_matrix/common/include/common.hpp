@@ -7,8 +7,8 @@
 
 namespace zenin_a_sum_values_by_columns_matrix {
 
-using InType = int;
-using OutType = int;
+using InType = std::tuple<int, int, std::vector<int>>;
+using OutType = std::vector<int>;
 using TestType = std::tuple<int, std::string>;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
