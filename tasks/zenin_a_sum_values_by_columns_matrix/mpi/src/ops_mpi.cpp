@@ -10,17 +10,17 @@
 
 namespace zenin_a_sum_values_by_columns_matrix {
 
-ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InType& in) {
+ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
   GetOutput() = OutType{};
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  const auto& input = GetInput();
+  const auto &input = GetInput();
   int rows = std::get<0>(input);
   int cols = std::get<1>(input);
-  const auto& matrix_data = std::get<2>(input);
+  const auto &matrix_data = std::get<2>(input);
 
   int initialized;
   MPI_Initialized(&initialized);
@@ -58,10 +58,10 @@ bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
-  const auto& input = GetInput();
+  const auto &input = GetInput();
   int rows = std::get<0>(input);
   int cols = std::get<1>(input);
-  const auto& matrix_data = std::get<2>(input);
+  const auto &matrix_data = std::get<2>(input);
 
   int matrix_info[2] = {rows, cols};
   MPI_Bcast(matrix_info, 2, MPI_INT, 0, MPI_COMM_WORLD);
@@ -80,10 +80,10 @@ bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
-  const auto& input = GetInput();
+  const auto &input = GetInput();
   int rows = std::get<0>(input);
   int cols = std::get<1>(input);
-  const auto& matrix_data = std::get<2>(input);
+  const auto &matrix_data = std::get<2>(input);
   MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
   MPI_Comm_rank(MPI_COMM_WORLD, &world_rank_);
 
@@ -139,7 +139,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
 
 bool ZeninASumValuesByColumnsMatrixMPI::PostProcessingImpl() {
   if (world_rank == 0) {
-    auto& output = GetOutput();
+    auto &output = GetOutput();
     if (output.empty()) {
       std::cout << "Error";
       return false;

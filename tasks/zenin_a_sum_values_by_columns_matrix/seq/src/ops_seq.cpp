@@ -1,9 +1,9 @@
 #include "zenin_a_sum_values_by_columns_matrix/seq/include/ops_seq.hpp"
 
-#include <iostream>
-#include <random> 
 #include <cmath>
+#include <iostream>
 #include <numeric>
+#include <random>
 #include <vector>
 
 #include "util/include/util.hpp"
@@ -22,7 +22,7 @@ bool ZeninASumValuesByColumnsMatrixSEQ::ValidationImpl() {
 
   int rows = std::get<0>(input);
   int cols = std::get<1>(input);
-  const auto& matrix_data = std::get<2>(input);
+  const auto &matrix_data = std::get<2>(input);
 
   if (rows <= 0 || cols <= 0) {
     return false;
@@ -63,7 +63,7 @@ bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
 }
 
 bool ZeninASumValuesByColumnsMatrixSEQ::PostProcessingImpl() {
-  auto& output = GetOutput();
+  auto &output = GetOutput();
 
   if (output.empty()) {
     return false;
