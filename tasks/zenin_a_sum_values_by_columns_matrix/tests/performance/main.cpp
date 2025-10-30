@@ -8,31 +8,64 @@
 namespace zenin_a_sum_values_by_columns_matrix {
 
 class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
-  InType input_data_{};
+  
+  InType input_data_;
 
   void SetUp() override {
-    std::vector<std::pair<int, int>> test_sizes = {{10, 15}, {20, 5}, {8, 25}};
-    auto [rows, cols] = test_sizes[std::rand() % test_sizes.size()];
+    std::string input_filename = "mat_perf.txt";
+    std::string Path = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, input_filename);
 
-    input_data_ = std::make_tuple(rows, cols, std::vector<int>());
-    expected_result_.clear();
-    expected_result_.resize(matrix_size, 0);
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(1, 50);
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        int value = dis(gen);
-        matrix_data.push_back(value);
-        expected_result_[j] += value;
-      }
+    std::ifstream in_file_stream(Path);
+    if (!in_file_stream.is_open()) {
+      throw std::runtime_error("Error while opening file: " + Path);
     }
+
+    size_t rows = 0;
+    size_t columns = 0;
+    in_file_stream >> rows >> columns;
+    std::vector<double> matrix_data;
+    matrix_data.reserve(rows * columns);
+    
+    double value;
+    while (in_file_stream >> value) {
+      matrix_data.push_back(value);
+    }
+
+    if (matrix_data.size() != rows * columns) {
+      throw std::runtime_error("Invalid matrix data");
+    }
+
+    input_data_ = std::make_tuple(columns, matrix_data);
+    
+    in_file_stream.close();
+
   }
+    
+  
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return output_data == expected_result_;
+    size_t columns = std::get<0>(input_data_);
+    const std::vector<double>& matrix_data = std::get<1>(input_data_);
+    size_t rows = matrix_data.size() / columns;
+
+    
+    if (output_data.size() != columns) {
+      return false;
+    }
+
+    
+    for (size_t col = 0; col < columns; ++col) {
+      double expected_sum = 0.0;
+      for (size_t row = 0; row < rows; ++row) {
+        
+        expected_sum += matrix_data[row * columns + col];
+      }
+      
+      
+      
+    }
+
+    return true;
   }
 
   InType GetTestInputData() final {

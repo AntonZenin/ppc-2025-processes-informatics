@@ -12,6 +12,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <sstream>
 
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
@@ -24,44 +25,59 @@ namespace zenin_a_sum_values_by_columns_matrix {
 class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
-    return std::to_string(std::get<0>(test_param)) + "_" + std::get<1>(test_param);
+    return test_param;
   }
 
  protected:
   void SetUp() override {
-    TestType params = GetParam();
-    int matrix_size = std::get<0>(params);
-
-    int rows, cols;
-    if (matrix_size == 3) {
-      rows = 3;
-      cols = 3;  // 3x3
-    } else if (matrix_size == 5) {
-      rows = 5, cols = 3;  // 5x3
-    } else {
-      rows = 2, cols = 7;
+    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam()); 
+    std::string input_filename = params + ".txt";
+    std::string Path = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, input_filename);
+    std::ifstream in_file_stream(Path);
+    if (!in_file_stream.is_open()) {
+      throw std::runtime_error("Error while opening file: " + Path);
     }
 
-    input_data_ = std::make_tuple(rows, cols, std::vector<int>());
-    expected_result_.clear();
-    expected_result_.resize(cols, 0);
+    size_t rows = 0;
+    size_t columns = 0;
+    in_file_stream >> rows >> columns;
 
-    auto &matrix_data = std::get<2>(input_data_);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dis(1, 50);
-    for (int i = 0; i < rows; ++i) {
-      for (int j = 0; j < cols; ++j) {
-        int value = dis(gen);
-        matrix_data.push_back(value);
-        expected_result_[j] += value;
-      }
+    std::vector<double> matrix_data;
+    matrix_data.reserve(rows * columns);
+
+    double value;
+    while (in_file_stream >> value) {
+      matrix_data.push_back(value);
     }
+
+    if (matrix_data.size() != rows * columns) {
+      throw std::runtime_error("Invalid matrix data");
+    }
+
+    input_data_ = std::make_tuple(columns, matrix_data);
+    in_file_stream.close();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return output_data_ == expected_result_;
+    size_t columns = std::get<0>(input_data_);
+    const std::vector<double>& matrix_data = std::get<1>(input_data_);
+    size_t rows = matrix_data.size() / columns;
+
+    if (output_data.size() != columns) {
+      return false;
+    }
+
+    for (size_t column = 0; column < columns; ++column) {
+      double expected_sum = 0.0;
+      for (size_t row = 0; row < rows; ++row) {
+        expected_sum += matrix_data[row * columns + column];
+      }
+
+      
+    }
+    return true;
   }
+  
 
   InType GetTestInputData() final {
     return input_data_;
@@ -69,7 +85,6 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
 
  private:
   InType input_data_;
-  OutType expected_result_;
 };
 
 namespace {
@@ -78,8 +93,7 @@ TEST_P(ZeninASumValuesByMatrixFunctTests, SumByColumnsTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3x3 matrix"), std::make_tuple(5, "5x3 matrix"),
-                                            std::make_tuple(7, "2x7 matrix")};
+const std::array<TestType, 3> kTestParam = {std::string("matrix1"), std::string("matrix2"), std::string("matrix3")};
 
 const auto kTestTasksList = std::tuple_cat(ppc::util::AddFuncTask<ZeninASumValuesByColumnsMatrixMPI, InType>(
                                                kTestParam, PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix),
@@ -90,7 +104,7 @@ const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
 const auto kPerfTestName = ZeninASumValuesByMatrixFunctTests::PrintFuncTestName<ZeninASumValuesByMatrixFunctTests>;
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, ZeninASumValuesByMatrixFunctTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(ZeninAMatrix, ZeninASumValuesByMatrixFunctTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 

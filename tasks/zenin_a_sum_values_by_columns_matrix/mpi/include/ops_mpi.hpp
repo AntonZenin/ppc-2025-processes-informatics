@@ -18,9 +18,6 @@ class ZeninASumValuesByColumnsMatrixMPI : public BaseTask {
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
-  int world_size_ = 1;
-  int world_rank_ = 0; 
-
 };
 
 }  // namespace zenin_a_sum_values_by_columns_matrix
