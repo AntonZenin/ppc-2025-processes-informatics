@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mpi.h>
 #include "task/include/task.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 
@@ -17,6 +18,9 @@ class ZeninASumValuesByColumnsMatrixMPI : public BaseTask {
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
+  int world_size_ = 1;
+  int world_rank_ = 0; 
+
 };
 
 }  // namespace zenin_a_sum_values_by_columns_matrix

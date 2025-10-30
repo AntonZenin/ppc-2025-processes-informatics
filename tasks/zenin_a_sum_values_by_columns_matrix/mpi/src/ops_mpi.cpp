@@ -1,9 +1,14 @@
 #include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
 
 #include <mpi.h>
-
 #include <numeric>
 #include <vector>
+#include <cmath>
+#include <iostream>
+#include <cstddef>
+#include <limits>
+#include <type_traits>
+
 
 #include "util/include/util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
@@ -14,155 +19,126 @@ ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InTyp
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
   GetOutput() = OutType{};
+  
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  const auto &input = GetInput();
-  int rows = std::get<0>(input);
-  int cols = std::get<1>(input);
-  const auto &matrix_data = std::get<2>(input);
-
-  int initialized;
-  MPI_Initialized(&initialized);
-  if (!initialized) {
-    MPI_Init(nullptr, nullptr);
-  }
-
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank_);
-
-  if (rows <= 0 || cols <= 0) {
-    if (world_rank_ == 0) {
-      std::cout << "Error";
-    }
-    return false
-  }
-
-  int expected_size = rows * cols;
-  if (matrix_data.size() != expected_size) {
-    if (world_rank_ == 0) {
-      std::cout << "Error";
-    }
-    return false;
-  }
-  if (world_size_ > cols) {
-    if (world_rank_ == 0) {
-      std::cout << "Error";
-    }
-  }
-
-  if (world_rank_ == 0) {
-    std::cout << "Validation passed";
-  }
-  return true;
+  auto& input = GetInput(); 
+  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
+  return (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && (GetOutput().empty()) && check_rows;
+  
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
-  const auto &input = GetInput();
-  int rows = std::get<0>(input);
-  int cols = std::get<1>(input);
-  const auto &matrix_data = std::get<2>(input);
-
-  int matrix_info[2] = {rows, cols};
-  MPI_Bcast(matrix_info, 2, MPI_INT, 0, MPI_COMM_WORLD);
-
-  if (world_rank_ == 0) {
-    int base_cols = cols / world_size_;
-    int remainder = cols % world_size_;
-
-    for (int i = 0; i < world_size_; ++i) {
-      int proc_cols = (i < remainder) ? base_cols + 1 : base_cols;
-    }
-  }
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  return true;
+  auto& input = GetInput();
+  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0; 
+  return (GetOutput().empty()) && (std::get<0>(input) > 0) && check_rows && (!std::get<1>(input).empty());
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
-  const auto &input = GetInput();
-  int rows = std::get<0>(input);
-  int cols = std::get<1>(input);
-  const auto &matrix_data = std::get<2>(input);
-  MPI_Comm_size(MPI_COMM_WORLD, &world_size_);
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank_);
+  auto& input = GetInput();
+  
+  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0; 
+  bool testing = (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && check_rows;
+  if (!testing) {
+    return false;
+  }
 
-  int base_cols_per_process = cols / world_size_;
-  int reminder = cols % world_size_;
+  size_t columns = 0;
+  std::vector<double> matrix_data;
+  int world_size = 0;
+  int Rank = 0;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
 
-  int my_cols_start, my_cols_count;
-  if (world_rank_ < remainder) {
-    my_cols_count = base_cols_per_process + 1;
-    my_cols_start = world_rank_ * my_cols_count;
+  if (Rank == 0) {
+    columns = std::get<0>(input);
+    matrix_data = std::get<1>(input);
+  }
+  
+  MPI_Bcast(&columns, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+
+  size_t rows = 0;
+  if (Rank == 0) {
+    rows = matrix_data.size() / columns;
+  }
+
+  MPI_Bcast(&rows, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+
+  size_t base_cols_per_process = columns / world_size;
+  size_t remain = columns % world_size;
+
+  size_t start_column = 0;
+  size_t end_column = 0;
+  size_t cols_this_process = base_cols_per_process;
+
+  if (Rank == world_size - 1) {
+    
+    start_column = Rank * base_cols_per_process;
+    cols_this_process = base_cols_per_process + remain;
+    end_column = start_column + cols_this_process;
   } else {
-    my_cols_count = base_cols_per_process;
-    my_cols_start = remainder * (base_cols_per_process + 1) + (world_rank - remainder) * base_cols_per_process;
+    start_column = Rank * base_cols_per_process;
+    end_column = start_column + base_cols_per_process;
+    cols_this_process = base_cols_per_process;
   }
 
-  std::vector<int> my_column_sums(my_cols_count, 0);
-  for (int col = 0; col < my_cols_count; ++col) {
-    int global_col = my_cols_start + col;
-    for (int row = 0; row < rows; ++row) {
-      int index = row * cols + global_col;
-      my_column_sums[col] += matrix_data[index];
+  if (Rank != 0) {
+    matrix_data.resize(rows * columns);
+  }
+  MPI_Bcast(matrix_data.data(), static_cast<int>(matrix_data.size()), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  std::vector<double> local_sums(cols_this_process, 0.0);
+
+  for (size_t column = 0; column < cols_this_process; ++column) {
+    size_t global_col = start_column + column;
+    for (size_t row = 0; row < rows; ++row) {
+      local_sums[column] += matrix_data[row * columns + global_col];
     }
   }
 
-  if (world_rank == 0) {
-    OutType result(cols, 0);
-    for (int i = 0; i < my_cols_count; ++i) {
-      result[my_cols_start + i] = my_column_sums[i];
-    }
-    for (int proc = 1; proc < world_size_; ++proc) {
-      int proc_cols_count, proc_cols_start;
-      if (proc < remainder) {
-        proc_cols_count = base_cols_per_process + 1;
-        proc_cols_start = proc * proc_cols_count;
+  std::vector<double> global_sums;
+  if (Rank == 0) {
+    global_sums.resize(columns, 0.0);
+  }
+
+  std::vector<int> recv_counts(world_size);
+  std::vector<int> displacements(world_size);
+
+  if (Rank == 0) {
+    for (int i = 0; i < world_size; ++i) {
+      if (i == world_size - 1) {
+        recv_counts[i] = static_cast<int>(base_cols_per_process + remain);
       } else {
-        proc_cols_count = base_cols_per_process;
-        proc_cols_start = remainder * (base_cols_per_process + 1) + (proc - remainder) * base_cols_per_process;
+        recv_counts[i] = static_cast<int>(base_cols_per_process);
       }
-      std::vector<int> proc_results(proc_cols_count);
-      MPI_Recv(proc_results.data(), proc_cols_count, MPI_INT, proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      for (int i = 0; i < proc_cols_count; ++i) {
-        result[proc_cols_start + i] = proc_results[i];
+      
+      if (i == 0) {
+        displacements[i] = 0;
+      } else {
+        displacements[i] = displacements[i-1] + recv_counts[i-1];
       }
     }
-    GetOutput() = result;
-  } else {
-    MPI_Send(my_column_sums.data(), my_cols_count, MPI_INT, 0, 0, MPI_COMM_WORLD);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+
+  MPI_Gatherv(local_sums.data(), static_cast<int>(local_sums.size()), MPI_DOUBLE,
+              global_sums.data(), recv_counts.data(), displacements.data(), MPI_DOUBLE,
+              0, MPI_COMM_WORLD);
+
+  
+  if (Rank == 0) {
+    GetOutput() = global_sums;
+  }
 
   return true;
+
+
+  
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PostProcessingImpl() {
-  if (world_rank == 0) {
-    auto &output = GetOutput();
-    if (output.empty()) {
-      std::cout << "Error";
-      return false;
-    }
-    std::cout << "Postprocessing: Column sums = [";
-    for (size_t i = 0; i < std::min(output.size(), size_t(10)); ++i) {
-      std::cout << output[i];
-      if (i < output.size() - 1 && i < 9) {
-        std::cout << ", ";
-      }
-    }
-    if (output.size() > 10) {
-      std::cout << ", ... (" << output.size() - 10 << " more)";
-    }
-    std::cout << "]" << std::endl;
-  }
-
-  int finalized;
-  MPI_Finalized(&finalized);
-  if (!finalized) {
-    MPI_Finalize();
-  }
-  return true;
+  return !GetOutput().empty();
+ 
 }
 
 }  // namespace zenin_a_sum_values_by_columns_matrix
