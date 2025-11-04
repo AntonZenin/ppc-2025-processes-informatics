@@ -23,16 +23,32 @@ ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InTyp
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  auto& input = GetInput(); 
+  /*auto& input = GetInput(); 
   bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  return (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && (GetOutput().empty()) && check_rows;
+  return (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && (GetOutput().empty()) && check_rows;*/
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return true;
+  }
+  size_t columns = std::get<0>(GetInput());
+  const std::vector<double>& matrix_data = std::get<1>(GetInput());
+  return (columns > 0) && (matrix_data.size() % columns == 0) && (GetOutput().empty());
+
   
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
-  auto& input = GetInput();
+  /*auto& input = GetInput();
   bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0; 
-  return (GetOutput().empty()) && (std::get<0>(input) > 0) && check_rows && (!std::get<1>(input).empty());
+  return (GetOutput().empty()) && (std::get<0>(input) > 0) && check_rows && (!std::get<1>(input).empty());*/
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank != 0) {
+    return true;
+  }
+  GetOutput().clear();
+  return true;
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
@@ -44,33 +60,40 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
     return false;
   }
 
-  size_t columns = 0;
-  std::vector<double> matrix_data;
+  //size_t columns = 0;
+  //std::vector<double> matrix_data;
   int world_size = 0;
   int Rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
 
+  size_t columns = 0;
+  std::vector<double>matrix_data;
+  size_t total_rows = 0;
+
   if (Rank == 0) {
     columns = std::get<0>(input);
     matrix_data = std::get<1>(input);
+    total_rows = matrix_data.size() / columns;
+    if (matrix_data.size() % columns != 0) {
+      return false;
+    }
   }
   
   MPI_Bcast(&columns, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-
-  size_t rows = 0;
-  if (Rank == 0) {
-    rows = matrix_data.size() / columns;
+  MPI_Bcast(&total_rows, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+  if (columns == 0) {
+    return false;
   }
 
-  MPI_Bcast(&rows, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+
 
   size_t base_cols_per_process = columns / world_size;
   size_t remain = columns % world_size;
 
   size_t start_column = 0;
   size_t end_column = 0;
-  size_t cols_this_process = base_cols_per_process;
+  size_t cols_this_process = 0;
 
   if (Rank == world_size - 1) {
     
@@ -84,16 +107,16 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   }
 
   if (Rank != 0) {
-    matrix_data.resize(rows * columns);
+    matrix_data.resize(total_rows * columns);
   }
   MPI_Bcast(matrix_data.data(), static_cast<int>(matrix_data.size()), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   std::vector<double> local_sums(cols_this_process, 0.0);
 
-  for (size_t column = 0; column < cols_this_process; ++column) {
-    size_t global_col = start_column + column;
-    for (size_t row = 0; row < rows; ++row) {
-      local_sums[column] += matrix_data[row * columns + global_col];
+  for (size_t local_column = 0; local_column < cols_this_process; ++local_column) {
+    size_t global_col = start_column + local_column;
+    for (size_t row = 0; row < total_rows; ++row) {
+      local_sums[local_column] += matrix_data[row * columns + global_col];
     }
   }
 
@@ -102,8 +125,8 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
     global_sums.resize(columns, 0.0);
   }
 
-  std::vector<int> recv_counts(world_size);
-  std::vector<int> displacements(world_size);
+  std::vector<int> recv_counts(world_size, 0);
+  std::vector<int> displacements(world_size, 0);
 
   if (Rank == 0) {
     for (int i = 0; i < world_size; ++i) {
@@ -113,9 +136,9 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
         recv_counts[i] = static_cast<int>(base_cols_per_process);
       }
       
-      if (i == 0) {
-        displacements[i] = 0;
-      } else {
+      if (i > 0) {
+      
+      
         displacements[i] = displacements[i-1] + recv_counts[i-1];
       }
     }
@@ -126,9 +149,12 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
               0, MPI_COMM_WORLD);
 
   
-  if (Rank == 0) {
-    GetOutput() = global_sums;
-  }
+  if (Rank != 0) {
+    global_sums.resize(columns);
+    //GetOutput() = global_sums;
+  } 
+  MPI_Bcast(global_sums.data(), static_cast<int>(columns), MPI_DOUBLE, 0, MPI_COMM_WORLD); 
+  GetOutput() = global_sums; 
 
   return true;
 
@@ -137,7 +163,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PostProcessingImpl() {
-  return !GetOutput().empty();
+  return true;
  
 }
 

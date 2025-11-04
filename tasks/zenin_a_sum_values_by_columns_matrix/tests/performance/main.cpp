@@ -44,13 +44,14 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
   
 
   bool CheckTestOutputData(OutType &output_data) final {
+    bool result = true;
     size_t columns = std::get<0>(input_data_);
     const std::vector<double>& matrix_data = std::get<1>(input_data_);
     size_t rows = matrix_data.size() / columns;
 
-    
     if (output_data.size() != columns) {
-      return false;
+      result = false;
+      return result;
     }
 
     
@@ -85,6 +86,6 @@ const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
 const auto kPerfTestName = ZeninASumValuesByMatrixPerfTests::CustomPerfTestName;
 
-INSTANTIATE_TEST_SUITE_P(RunModeTests, ZeninASumValuesByMatrixPerfTests, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(ZeninAPerfTestMatrix, ZeninASumValuesByMatrixPerfTests, kGtestValues, kPerfTestName);
 
 }  // namespace zenin_a_sum_values_by_columns_matrix
