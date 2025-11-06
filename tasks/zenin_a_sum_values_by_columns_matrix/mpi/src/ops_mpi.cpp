@@ -87,16 +87,16 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   size_t remain = columns % world_size;
 
   size_t start_column = 0;
-  size_t end_column = 0;
+  // size_t end_column = 0;
   size_t cols_this_process = 0;
 
   if (Rank == world_size - 1) {
     start_column = Rank * base_cols_per_process;
     cols_this_process = base_cols_per_process + remain;
-    end_column = start_column + cols_this_process;
+    // end_column = start_column + cols_this_process;
   } else {
     start_column = Rank * base_cols_per_process;
-    end_column = start_column + base_cols_per_process;
+    // end_column = start_column + base_cols_per_process;
     cols_this_process = base_cols_per_process;
   }
 

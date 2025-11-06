@@ -62,13 +62,13 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
     size_t columns = std::get<0>(input_data_);
     const std::vector<double> &matrix_data = std::get<1>(input_data_);
     size_t rows = matrix_data.size() / columns;
+    double expected_sum = 0.0;
 
     if (output_data.size() != columns) {
       return false;
     }
 
     for (size_t column = 0; column < columns; ++column) {
-      double expected_sum = 0.0;
       for (size_t row = 0; row < rows; ++row) {
         expected_sum += matrix_data[row * columns + column];
       }
