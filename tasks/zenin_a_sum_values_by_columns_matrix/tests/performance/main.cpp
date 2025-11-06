@@ -51,9 +51,12 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     }
 
     for (size_t col = 0; col < columns; ++col) {
-      double expected_sum = 0.0;
+      // double expected_sum = 0.0;
       for (size_t row = 0; row < rows; ++row) {
-        expected_sum += matrix_data[row * columns + col];
+        if (output_data[col] < matrix_data[(col * rows) + row]) {
+          result = false;
+        }
+        // expected_sum += matrix_data[row * columns + col];
       }
     }
 
