@@ -7,12 +7,12 @@
 #include <cstdint>
 #include <numeric>
 #include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <sstream>
 
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
@@ -30,7 +30,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
 
  protected:
   void SetUp() override {
-    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam()); 
+    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
     std::string input_filename = params + ".txt";
     std::string Path = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, input_filename);
     std::ifstream in_file_stream(Path);
@@ -60,7 +60,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
 
   bool CheckTestOutputData(OutType &output_data) final {
     size_t columns = std::get<0>(input_data_);
-    const std::vector<double>& matrix_data = std::get<1>(input_data_);
+    const std::vector<double> &matrix_data = std::get<1>(input_data_);
     size_t rows = matrix_data.size() / columns;
 
     if (output_data.size() != columns) {
@@ -72,12 +72,9 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
       for (size_t row = 0; row < rows; ++row) {
         expected_sum += matrix_data[row * columns + column];
       }
-
-      
     }
     return true;
   }
-  
 
   InType GetTestInputData() final {
     return input_data_;

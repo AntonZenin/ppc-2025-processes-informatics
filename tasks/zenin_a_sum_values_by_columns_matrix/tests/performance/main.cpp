@@ -8,7 +8,6 @@
 namespace zenin_a_sum_values_by_columns_matrix {
 
 class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  
   InType input_data_;
 
   void SetUp() override {
@@ -25,7 +24,7 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     in_file_stream >> rows >> columns;
     std::vector<double> matrix_data;
     matrix_data.reserve(rows * columns);
-    
+
     double value;
     while (in_file_stream >> value) {
       matrix_data.push_back(value);
@@ -36,17 +35,14 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     }
 
     input_data_ = std::make_tuple(columns, matrix_data);
-    
-    in_file_stream.close();
 
+    in_file_stream.close();
   }
-    
-  
 
   bool CheckTestOutputData(OutType &output_data) final {
     bool result = true;
     size_t columns = std::get<0>(input_data_);
-    const std::vector<double>& matrix_data = std::get<1>(input_data_);
+    const std::vector<double> &matrix_data = std::get<1>(input_data_);
     size_t rows = matrix_data.size() / columns;
 
     if (output_data.size() != columns) {
@@ -54,16 +50,11 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
       return result;
     }
 
-    
     for (size_t col = 0; col < columns; ++col) {
       double expected_sum = 0.0;
       for (size_t row = 0; row < rows; ++row) {
-        
         expected_sum += matrix_data[row * columns + col];
       }
-      
-      
-      
     }
 
     return true;
