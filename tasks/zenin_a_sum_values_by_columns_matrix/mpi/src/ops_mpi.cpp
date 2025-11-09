@@ -22,9 +22,6 @@ ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InTyp
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  /*auto& input = GetInput();
-  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  return (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && (GetOutput().empty()) && check_rows;*/
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank != 0) {
@@ -36,9 +33,6 @@ bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
-  /*auto& input = GetInput();
-  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  return (GetOutput().empty()) && (std::get<0>(input) > 0) && check_rows && (!std::get<1>(input).empty());*/
   int rank = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if (rank != 0) {
@@ -57,8 +51,6 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
     return false;
   }
 
-  // size_t columns = 0;
-  // std::vector<double> matrix_data;
   int world_size = 0;
   int Rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -87,16 +79,13 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   size_t remain = columns % world_size;
 
   size_t start_column = 0;
-  // size_t end_column = 0;
   size_t cols_this_process = 0;
 
   if (Rank == world_size - 1) {
     start_column = Rank * base_cols_per_process;
     cols_this_process = base_cols_per_process + remain;
-    // end_column = start_column + cols_this_process;
   } else {
     start_column = Rank * base_cols_per_process;
-    // end_column = start_column + base_cols_per_process;
     cols_this_process = base_cols_per_process;
   }
 
@@ -139,10 +128,16 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   MPI_Gatherv(local_sums.data(), static_cast<int>(local_sums.size()), MPI_DOUBLE, global_sums.data(),
               recv_counts.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+  // GetOutput().resize(columns);
+
+  /*if (Rank == 0) {
+    GetOutput() = global_sums;
+  }*/
+
   if (Rank != 0) {
     global_sums.resize(columns);
-    // GetOutput() = global_sums;
   }
+
   MPI_Bcast(global_sums.data(), static_cast<int>(columns), MPI_DOUBLE, 0, MPI_COMM_WORLD);
   GetOutput() = global_sums;
 

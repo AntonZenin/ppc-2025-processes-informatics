@@ -50,13 +50,17 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
       return result;
     }
 
-    for (size_t col = 0; col < columns; ++col) {
-      // double expected_sum = 0.0;
-      for (size_t row = 0; row < rows; ++row) {
-        if (output_data[col] < matrix_data[(col * rows) + row]) {
-          result = false;
-        }
-        // expected_sum += matrix_data[row * columns + col];
+    std::vector<double> expected_sums(columns, 0.0);
+
+    for (size_t row = 0; row < rows; ++row) {
+      for (size_t column = 0; column < columns; ++column) {
+        expected_sums[column] += matrix_data[row * columns + column];
+      }
+    }
+
+    for (size_t column = 0; column < columns; ++column) {
+      if (std::abs(output_data[column] - expected_sums[column]) > 1e-9) {
+        return false;
       }
     }
 

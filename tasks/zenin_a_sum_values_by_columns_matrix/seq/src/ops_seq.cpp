@@ -32,16 +32,6 @@ bool ZeninASumValuesByColumnsMatrixSEQ::PreProcessingImpl() {
 
 bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
   auto &input = GetInput();
-  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  if (!check_rows) {
-    return false;
-  }
-  if (std::get<1>(input).empty()) {
-    return false;
-  }
-  if (std::get<0>(input) == 0) {
-    return false;
-  }
   size_t columns = std::get<0>(input);
   const std::vector<double> &matrix_data = std::get<1>(input);
   size_t rows = matrix_data.size() / columns;
@@ -52,23 +42,10 @@ bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
     }
   }
   return true;
-
-  /*const auto &columns = std::get<0>(input);
-  const auto &matrix_data = std::get<1>(input);
-  size_t rows = matrix_data.size() / columns;
-  OutType &result = GetOutput();
-  using T = std::decay_t<decltype(*matrix_data.begin())>;
-  result.resize(columns, static_cast<T>(0));  // заполняем нулями
-  for (size_t j = 0; j < columns; ++j) {
-    for (size_t i = 0; i < rows; ++i) {
-      result[j] += matrix_data[(j * rows) + i];
-    }
-  }
-  return !GetOutput().empty();*/
 }
 
 bool ZeninASumValuesByColumnsMatrixSEQ::PostProcessingImpl() {
-  return !GetOutput().empty();
+  return true;
 }
 
 }  // namespace zenin_a_sum_values_by_columns_matrix
