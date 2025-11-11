@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <limits>
 #include <numeric>
@@ -52,94 +53,66 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   }
 
   int world_size = 0;
-  int Rank = 0;
+  int rank = 0;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
 
   size_t columns = 0;
-  std::vector<double> matrix_data;
-  size_t total_rows = 0;
+  std::vector<double> matrix;
 
-  if (Rank == 0) {
-    columns = std::get<0>(input);
-    matrix_data = std::get<1>(input);
-    total_rows = matrix_data.size() / columns;
-    if (matrix_data.size() % columns != 0) {
+  if (rank == 0) {
+    columns = std::get<0>(GetInput());
+    matrix = std::get<1>(GetInput());
+
+    if (columns == 0 || matrix.empty() || matrix.size() % columns != 0) {
       return false;
     }
   }
+  uint64_t columns_u64 = static_cast<uint64_t>(columns);
+  MPI_Bcast(&columns_u64, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+  columns = static_cast<size_t>(columns_u64);
 
-  MPI_Bcast(&columns, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-  MPI_Bcast(&total_rows, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-  if (columns == 0) {
+  uint64_t total_rows_u64 = 0;
+  if (rank == 0) {
+    total_rows_u64 = static_cast<uint64_t>(matrix.size() / columns);
+  }
+
+  MPI_Bcast(&total_rows_u64, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+  size_t total_rows = static_cast<size_t>(total_rows_u64);
+
+  size_t total_elems = total_rows * columns;
+
+  std::vector<int> counts(world_size, 0);
+  std::vector<int> displacements(world_size, 0);
+
+  size_t elems_per_proc = total_elems / static_cast<size_t>(world_size);
+  size_t remainder = total_elems % static_cast<size_t>(world_size);
+
+  int displace = 0;
+  for (int i = 0; i < world_size; i++) {
+    counts[i] = static_cast<int>(elems_per_proc + (i < remainder ? 1 : 0));
+    displacements[i] = displace;
+    displace += counts[i];
+  }
+
+  std::vector<double> local_buff(static_cast<size_t>(counts[rank]), 0.0);
+  if (rank == 0 && matrix.size() != total_elems) {
     return false;
   }
 
-  size_t base_cols_per_process = columns / world_size;
-  size_t remain = columns % world_size;
+  MPI_Scatterv((rank == 0 ? matrix.data() : nullptr), counts.data(), displacements.data(), MPI_DOUBLE,
+               (counts[rank] ? local_buff.data() : nullptr), counts[rank], MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-  size_t start_column = 0;
-  size_t cols_this_process = 0;
-
-  if (Rank == world_size - 1) {
-    start_column = Rank * base_cols_per_process;
-    cols_this_process = base_cols_per_process + remain;
-  } else {
-    start_column = Rank * base_cols_per_process;
-    cols_this_process = base_cols_per_process;
+  std::vector<double> local_sums(columns, 0.0);
+  size_t shift = static_cast<size_t>(displacements[rank]) % columns;
+  for (size_t i = 0; i < static_cast<size_t>(counts[rank]); ++i) {
+    size_t col_index = (i + shift) % columns;
+    local_sums[col_index] += local_buff[i];
   }
 
-  if (Rank != 0) {
-    matrix_data.resize(total_rows * columns);
-  }
-  MPI_Bcast(matrix_data.data(), static_cast<int>(matrix_data.size()), MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-  std::vector<double> local_sums(cols_this_process, 0.0);
-
-  for (size_t local_column = 0; local_column < cols_this_process; ++local_column) {
-    size_t global_col = start_column + local_column;
-    for (size_t row = 0; row < total_rows; ++row) {
-      local_sums[local_column] += matrix_data[row * columns + global_col];
-    }
-  }
-
-  std::vector<double> global_sums;
-  if (Rank == 0) {
-    global_sums.resize(columns, 0.0);
-  }
-
-  std::vector<int> recv_counts(world_size, 0);
-  std::vector<int> displacements(world_size, 0);
-
-  if (Rank == 0) {
-    for (int i = 0; i < world_size; ++i) {
-      if (i == world_size - 1) {
-        recv_counts[i] = static_cast<int>(base_cols_per_process + remain);
-      } else {
-        recv_counts[i] = static_cast<int>(base_cols_per_process);
-      }
-
-      if (i > 0) {
-        displacements[i] = displacements[i - 1] + recv_counts[i - 1];
-      }
-    }
-  }
-
-  MPI_Gatherv(local_sums.data(), static_cast<int>(local_sums.size()), MPI_DOUBLE, global_sums.data(),
-              recv_counts.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-  // GetOutput().resize(columns);
-
-  /*if (Rank == 0) {
-    GetOutput() = global_sums;
-  }*/
-
-  if (Rank != 0) {
-    global_sums.resize(columns);
-  }
-
-  MPI_Bcast(global_sums.data(), static_cast<int>(columns), MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  GetOutput() = global_sums;
+  GetOutput().assign(columns, 0.0);
+  MPI_Allreduce(local_sums.data(), GetOutput().data(), static_cast<int>(columns), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
   return true;
 }
