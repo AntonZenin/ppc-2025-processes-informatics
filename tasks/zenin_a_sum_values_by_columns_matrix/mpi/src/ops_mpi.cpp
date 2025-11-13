@@ -23,14 +23,8 @@ ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InTyp
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank != 0) {
-    return true;
-  }
-  size_t columns = std::get<0>(GetInput());
-  const std::vector<double> &matrix_data = std::get<1>(GetInput());
-  return (columns > 0) && (matrix_data.size() % columns == 0) && (GetOutput().empty());
+  auto &input = GetInput();
+  return ((std::get<0>(input)) * std::get<1>(input) == std::get<2>(input).size() && (GetOutput().empty()));
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
@@ -45,13 +39,6 @@ bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
 
 bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   auto &input = GetInput();
-
-  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  bool testing = (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && check_rows;
-  if (!testing) {
-    return false;
-  }
-
   int world_size = 0;
   int rank = 0;
 
@@ -63,9 +50,9 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   size_t total_rows = 0;
 
   if (rank == 0) {
-    columns = std::get<0>(input);
-    matrix_data = std::get<1>(input);
-    total_rows = matrix_data.size() / columns;
+    columns = std::get<1>(input);
+    matrix_data = std::get<2>(input);
+    total_rows = std::get<0>(input);
     if (matrix_data.size() % columns != 0) {
       return false;
     }

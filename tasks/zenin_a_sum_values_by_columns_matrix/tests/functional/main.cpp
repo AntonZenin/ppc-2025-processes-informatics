@@ -43,7 +43,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
     in_file_stream >> rows >> columns;
 
     std::vector<double> matrix_data;
-    matrix_data.reserve(rows * columns);
+    // matrix_data.reserve(rows * columns);
 
     double value;
     while (in_file_stream >> value) {
@@ -54,15 +54,15 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
       throw std::runtime_error("Invalid matrix data");
     }
 
-    input_data_ = std::make_tuple(columns, matrix_data);
+    input_data_ = std::make_tuple(rows, columns, matrix_data);
     in_file_stream.close();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
     bool result = true;
-    size_t columns = std::get<0>(input_data_);
-    const std::vector<double> &matrix_data = std::get<1>(input_data_);
-    size_t rows = matrix_data.size() / columns;
+    size_t columns = std::get<1>(input_data_);
+    const std::vector<double> &matrix_data = std::get<2>(input_data_);
+    size_t rows = std::get<0>(input_data_);
 
     if (output_data.size() != columns) {
       result = false;
@@ -77,7 +77,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
       }
     }
     for (size_t column = 0; column < columns; ++column) {
-      if (std::abs(output_data[column] - expected_sums[column]) > 1e-9) {
+      if (std::abs(output_data[column] - expected_sums[column]) > 10e-12) {
         return false;
       }
     }

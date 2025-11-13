@@ -20,25 +20,24 @@ ZeninASumValuesByColumnsMatrixSEQ::ZeninASumValuesByColumnsMatrixSEQ(const InTyp
 
 bool ZeninASumValuesByColumnsMatrixSEQ::ValidationImpl() {
   auto &input = GetInput();
-  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  return (std::get<0>(input) > 0) && (!std::get<1>(input).empty()) && (GetOutput().empty()) && check_rows;
+  return (std::get<0>(input) * std::get<1>(input)) == std::get<2>(input).size() && (GetOutput().empty());
 }
 
 bool ZeninASumValuesByColumnsMatrixSEQ::PreProcessingImpl() {
   auto &input = GetInput();
-  bool check_rows = std::get<1>(input).size() % std::get<0>(input) == 0;
-  return (GetOutput().empty()) && (std::get<0>(input) > 0) && check_rows && (!std::get<1>(input).empty());
+  GetOutput().clear();
+  GetOutput().resize(std::get<1>(input), 0.0);
+  return true;
 }
 
 bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
   auto &input = GetInput();
-  size_t columns = std::get<0>(input);
-  const std::vector<double> &matrix_data = std::get<1>(input);
-  size_t rows = matrix_data.size() / columns;
-  GetOutput().resize(columns, 0.0);
+  auto &rows = std::get<0>(input);
+  auto &columns = std::get<1>(input);
+  auto &matrix = std::get<2>(input);
   for (size_t row = 0; row < rows; ++row) {
     for (size_t col = 0; col < columns; ++col) {
-      GetOutput()[col] += matrix_data[row * columns + col];
+      GetOutput()[col] += matrix[row * columns + col];
     }
   }
   return true;
