@@ -9,13 +9,10 @@ namespace zenin_a_sum_values_by_columns_matrix {
 
 class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
   InType input_data_;
-  // OutType expected_data_;
 
   void SetUp() override {
     std::string input_data_source =
         ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, "mat_perf.txt");
-    // std::string expected_data_source = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix,
-    // "expected_sum.txt");
 
     std::ifstream file(input_data_source);
     if (!file.is_open()) {
@@ -24,7 +21,6 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     size_t rows = 0;
     size_t columns = 0;
     std::vector<double> input;
-    // std::vector<double> expected;
     file >> rows;
     file >> columns;
     double value;
@@ -36,15 +32,6 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     }
     input_data_ = std::make_tuple(rows, columns, input);
     file.close();
-    /*file.close();
-    file = std::ifstream(expected_data_source);
-    file >> columns;
-    while (file >> value) {
-      input.push_back(value);
-    }
-    file.close();
-    input_data_ = InType(rows, columns, input);
-    expected_data_ = OutType(expected);*/
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
@@ -68,47 +55,6 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
       }
     }
     return true;
-    /*bool result = true;
-    size_t columns = std::get<0>(input_data_);
-    const std::vector<double> &matrix_data = std::get<1>(input_data_);
-    size_t rows = matrix_data.size() / columns;
-
-    if (output_data.size() != columns) {
-      result = false;
-      return result;
-    }
-
-    std::vector<double> expected_sums(columns, 0.0);
-
-    for (size_t row = 0; row < rows; ++row) {
-      for (size_t column = 0; column < columns; ++column) {
-        expected_sums[column] += matrix_data[row * columns + column];
-      }
-    }
-
-    for (size_t column = 0; column < columns; ++column) {
-      if (std::abs(output_data[column] - expected_sums[column]) > 1e-9) {
-        return false;
-      }
-    }
-
-    return true;*/
-    /*size_t columns = std::get<1>(input_data_);
-    if (output_data.empty()) {
-      return true;
-    }
-    if (output_data.size() != columns) {
-      return false;
-    }
-    /*if (output_data.size() != expected_data_.size()) {
-      return false;
-    }*/
-    /*for (size_t i = 0; i < expected_data_.size(); i++) {
-      if (std::abs(output_data[i] - expected_data_[i]) > 10e-12) {
-        return false;
-      }
-    }
-    return true;*/
   }
 
   InType GetTestInputData() final {

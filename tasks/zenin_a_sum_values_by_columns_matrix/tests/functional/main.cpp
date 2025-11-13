@@ -43,7 +43,6 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
     in_file_stream >> rows >> columns;
 
     std::vector<double> matrix_data;
-    // matrix_data.reserve(rows * columns);
 
     double value;
     while (in_file_stream >> value) {
