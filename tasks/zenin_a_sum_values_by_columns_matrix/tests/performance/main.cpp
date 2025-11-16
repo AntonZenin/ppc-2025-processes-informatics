@@ -50,7 +50,7 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
       }
     }
     for (size_t column = 0; column < columns; ++column) {
-      if (std::abs(output_data[column] - expected_sums[column]) > 10e-12) {
+      if (std::abs(output_data[column] - expected_sums[column]) > 1e-12) {
         return false;
       }
     }
