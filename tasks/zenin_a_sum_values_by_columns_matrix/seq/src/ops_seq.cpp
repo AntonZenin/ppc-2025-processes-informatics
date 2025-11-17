@@ -2,12 +2,8 @@
 
 #include <cmath>
 #include <cstddef>
-#include <iostream>
-#include <limits>
-#include <type_traits>
 #include <vector>
 
-#include "util/include/util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 
 namespace zenin_a_sum_values_by_columns_matrix {
@@ -37,7 +33,7 @@ bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
   auto &matrix = std::get<2>(input);
   for (size_t row = 0; row < rows; ++row) {
     for (size_t col = 0; col < columns; ++col) {
-      GetOutput()[col] += matrix[row * columns + col];
+      GetOutput()[col] += matrix[(row * columns) + col];
     }
   }
   return true;

@@ -1,17 +1,13 @@
 #include <gtest/gtest.h>
 #include <stb/stb_image.h>
 
-#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
-#include <cstdint>
-#include <numeric>
-#include <random>
-#include <sstream>
+#include <fstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "util/include/func_test_util.hpp"
@@ -32,10 +28,10 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
   void SetUp() override {
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
     std::string input_filename = params + ".txt";
-    std::string Path = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, input_filename);
-    std::ifstream in_file_stream(Path);
+    std::string path = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, input_filename);
+    std::ifstream in_file_stream(path);
     if (!in_file_stream.is_open()) {
-      throw std::runtime_error("Error while opening file: " + Path);
+      throw std::runtime_error("Error while opening file: " + path);
     }
 
     size_t rows = 0;
@@ -44,7 +40,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
 
     std::vector<double> matrix_data;
 
-    double value;
+    double value = 0.0;
     while (in_file_stream >> value) {
       matrix_data.push_back(value);
     }
@@ -72,7 +68,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
 
     for (size_t row = 0; row < rows; ++row) {
       for (size_t column = 0; column < columns; ++column) {
-        expected_sums[column] += matrix_data[row * columns + column];
+        expected_sums[column] += matrix_data[(row * columns) + column];
       }
     }
     for (size_t column = 0; column < columns; ++column) {

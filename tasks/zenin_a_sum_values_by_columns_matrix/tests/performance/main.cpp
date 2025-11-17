@@ -1,10 +1,15 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <cstddef>
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <vector>
 
 #include "util/include/perf_test_util.hpp"
+#include "util/include/util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/seq/include/ops_seq.hpp"
@@ -27,7 +32,7 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     std::vector<double> input;
     file >> rows;
     file >> columns;
-    double value;
+    double value = 0.0;
     while (file >> value) {
       input.push_back(value);
     }
@@ -50,7 +55,7 @@ class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InTy
     std::vector<double> expected_sums(columns, 0.0);
     for (size_t row = 0; row < rows; ++row) {
       for (size_t column = 0; column < columns; ++column) {
-        expected_sums[column] += matrix_data[row * columns + column];
+        expected_sums[column] += matrix_data[(row * columns) + column];
       }
     }
     for (size_t column = 0; column < columns; ++column) {
