@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
-
+#include <string>
+#include <fstream>
+#include <stdexcept>
 #include "util/include/perf_test_util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
