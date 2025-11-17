@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <tuple>
 #include <vector>
 
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
