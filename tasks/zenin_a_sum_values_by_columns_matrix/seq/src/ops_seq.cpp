@@ -1,60 +1,50 @@
-#include "example_processes/seq/include/ops_seq.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/seq/include/ops_seq.hpp"
 
-#include <numeric>
+#include <cmath>
+#include <cstddef>
+#include <iostream>
+#include <limits>
+#include <type_traits>
 #include <vector>
 
-#include "example_processes/common/include/common.hpp"
 #include "util/include/util.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 
-namespace nesterov_a_test_task_processes {
+namespace zenin_a_sum_values_by_columns_matrix {
 
-NesterovATestTaskSEQ::NesterovATestTaskSEQ(const InType &in) {
+ZeninASumValuesByColumnsMatrixSEQ::ZeninASumValuesByColumnsMatrixSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
-  GetOutput() = 0;
+  GetOutput() = OutType{};
 }
 
-bool NesterovATestTaskSEQ::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
+bool ZeninASumValuesByColumnsMatrixSEQ::ValidationImpl() {
+  auto &input = GetInput();
+  return (std::get<0>(input) * std::get<1>(input)) == std::get<2>(input).size() && (GetOutput().empty());
 }
 
-bool NesterovATestTaskSEQ::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
+bool ZeninASumValuesByColumnsMatrixSEQ::PreProcessingImpl() {
+  auto &input = GetInput();
+  GetOutput().clear();
+  GetOutput().resize(std::get<1>(input), 0.0);
+  return true;
 }
 
-bool NesterovATestTaskSEQ::RunImpl() {
-  if (GetInput() == 0) {
-    return false;
-  }
-
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
-      }
+bool ZeninASumValuesByColumnsMatrixSEQ::RunImpl() {
+  auto &input = GetInput();
+  auto &rows = std::get<0>(input);
+  auto &columns = std::get<1>(input);
+  auto &matrix = std::get<2>(input);
+  for (size_t row = 0; row < rows; ++row) {
+    for (size_t col = 0; col < columns; ++col) {
+      GetOutput()[col] += matrix[row * columns + col];
     }
   }
-
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
-
-  int counter = 0;
-  for (int i = 0; i < num_threads; i++) {
-    counter++;
-  }
-
-  if (counter != 0) {
-    GetOutput() /= counter;
-  }
-  return GetOutput() > 0;
+  return true;
 }
 
-bool NesterovATestTaskSEQ::PostProcessingImpl() {
-  GetOutput() -= GetInput();
-  return GetOutput() > 0;
+bool ZeninASumValuesByColumnsMatrixSEQ::PostProcessingImpl() {
+  return true;
 }
 
-}  // namespace nesterov_a_test_task_processes
+}  // namespace zenin_a_sum_values_by_columns_matrix

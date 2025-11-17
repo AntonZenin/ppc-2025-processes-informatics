@@ -1,16 +1,18 @@
 #pragma once
 
-#include "example_processes/common/include/common.hpp"
+#include <mpi.h>
+
 #include "task/include/task.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
 
-namespace nesterov_a_test_task_processes {
+namespace zenin_a_sum_values_by_columns_matrix {
 
-class NesterovATestTaskMPI : public BaseTask {
+class ZeninASumValuesByColumnsMatrixMPI : public BaseTask {
  public:
   static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
     return ppc::task::TypeOfTask::kMPI;
   }
-  explicit NesterovATestTaskMPI(const InType &in);
+  explicit ZeninASumValuesByColumnsMatrixMPI(const InType &in);
 
  private:
   bool ValidationImpl() override;
@@ -19,4 +21,4 @@ class NesterovATestTaskMPI : public BaseTask {
   bool PostProcessingImpl() override;
 };
 
-}  // namespace nesterov_a_test_task_processes
+}  // namespace zenin_a_sum_values_by_columns_matrix

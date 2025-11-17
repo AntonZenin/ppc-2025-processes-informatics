@@ -1,15 +1,18 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <tuple>
+#include <vector>
 
 #include "task/include/task.hpp"
 
-namespace nesterov_a_test_task_processes {
+namespace zenin_a_sum_values_by_columns_matrix {
 
-using InType = int;
-using OutType = int;
-using TestType = std::tuple<int, std::string>;
+using InType = std::tuple<size_t, size_t, std::vector<double>>;  // rows -> columns -> size
+using OutType = std::vector<double>;
+using TestType = std::string;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
-}  // namespace nesterov_a_test_task_processes
+}  // namespace zenin_a_sum_values_by_columns_matrix

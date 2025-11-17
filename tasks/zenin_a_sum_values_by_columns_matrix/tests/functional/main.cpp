@@ -6,53 +6,81 @@
 #include <cstddef>
 #include <cstdint>
 #include <numeric>
+#include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
-#include "example_processes/common/include/common.hpp"
-#include "example_processes/mpi/include/ops_mpi.hpp"
-#include "example_processes/seq/include/ops_seq.hpp"
 #include "util/include/func_test_util.hpp"
 #include "util/include/util.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/seq/include/ops_seq.hpp"
 
-namespace nesterov_a_test_task_processes {
+namespace zenin_a_sum_values_by_columns_matrix {
 
-class NesterovARunFuncTestsProcesses : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
+class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
-    return std::to_string(std::get<0>(test_param)) + "_" + std::get<1>(test_param);
+    return test_param;
   }
 
  protected:
   void SetUp() override {
-    int width = -1;
-    int height = -1;
-    int channels = -1;
-    std::vector<uint8_t> img;
-    // Read image in RGB to ensure consistent channel count
-    {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_example_processes, "pic.jpg");
-      auto *data = stbi_load(abs_path.c_str(), &width, &height, &channels, STBI_rgb);
-      if (data == nullptr) {
-        throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
-      }
-      channels = STBI_rgb;
-      img = std::vector<uint8_t>(data, data + (static_cast<ptrdiff_t>(width * height * channels)));
-      stbi_image_free(data);
-      if (std::cmp_not_equal(width, height)) {
-        throw std::runtime_error("width != height: ");
-      }
+    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
+    std::string input_filename = params + ".txt";
+    std::string Path = ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, input_filename);
+    std::ifstream in_file_stream(Path);
+    if (!in_file_stream.is_open()) {
+      throw std::runtime_error("Error while opening file: " + Path);
     }
 
-    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
-    input_data_ = width - height + std::min(std::accumulate(img.begin(), img.end(), 0), channels);
+    size_t rows = 0;
+    size_t columns = 0;
+    in_file_stream >> rows >> columns;
+
+    std::vector<double> matrix_data;
+
+    double value;
+    while (in_file_stream >> value) {
+      matrix_data.push_back(value);
+    }
+
+    if (matrix_data.size() != rows * columns) {
+      throw std::runtime_error("Invalid matrix data");
+    }
+
+    input_data_ = std::make_tuple(rows, columns, matrix_data);
+    in_file_stream.close();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return (input_data_ == output_data);
+    bool result = true;
+    size_t columns = std::get<1>(input_data_);
+    const std::vector<double> &matrix_data = std::get<2>(input_data_);
+    size_t rows = std::get<0>(input_data_);
+
+    if (output_data.size() != columns) {
+      result = false;
+      return result;
+    }
+
+    std::vector<double> expected_sums(columns, 0.0);
+
+    for (size_t row = 0; row < rows; ++row) {
+      for (size_t column = 0; column < columns; ++column) {
+        expected_sums[column] += matrix_data[row * columns + column];
+      }
+    }
+    for (size_t column = 0; column < columns; ++column) {
+      if (std::abs(output_data[column] - expected_sums[column]) > 1e-12) {
+        return false;
+      }
+    }
+    return true;
   }
 
   InType GetTestInputData() final {
@@ -60,27 +88,29 @@ class NesterovARunFuncTestsProcesses : public ppc::util::BaseRunFuncTests<InType
   }
 
  private:
-  InType input_data_ = 0;
+  InType input_data_;
 };
 
 namespace {
 
-TEST_P(NesterovARunFuncTestsProcesses, MatmulFromPic) {
+TEST_P(ZeninASumValuesByMatrixFunctTests, SumByColumnsTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3"), std::make_tuple(5, "5"), std::make_tuple(7, "7")};
+const std::array<TestType, 5> kTestParam = {std::string("matrix1"), std::string("matrix2"), std::string("matrix3"),
+                                            std::string("matrix4"), std::string("matrix5")};
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<NesterovATestTaskMPI, InType>(kTestParam, PPC_SETTINGS_example_processes),
-                   ppc::util::AddFuncTask<NesterovATestTaskSEQ, InType>(kTestParam, PPC_SETTINGS_example_processes));
+const auto kTestTasksList = std::tuple_cat(ppc::util::AddFuncTask<ZeninASumValuesByColumnsMatrixMPI, InType>(
+                                               kTestParam, PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix),
+                                           ppc::util::AddFuncTask<ZeninASumValuesByColumnsMatrixSEQ, InType>(
+                                               kTestParam, PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = NesterovARunFuncTestsProcesses::PrintFuncTestName<NesterovARunFuncTestsProcesses>;
+const auto kPerfTestName = ZeninASumValuesByMatrixFunctTests::PrintFuncTestName<ZeninASumValuesByMatrixFunctTests>;
 
-INSTANTIATE_TEST_SUITE_P(PicMatrixTests, NesterovARunFuncTestsProcesses, kGtestValues, kPerfTestName);
+INSTANTIATE_TEST_SUITE_P(ZeninAMatrix, ZeninASumValuesByMatrixFunctTests, kGtestValues, kPerfTestName);
 
 }  // namespace
 
-}  // namespace nesterov_a_test_task_processes
+}  // namespace zenin_a_sum_values_by_columns_matrix
