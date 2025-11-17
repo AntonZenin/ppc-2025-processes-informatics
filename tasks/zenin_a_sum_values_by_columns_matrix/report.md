@@ -23,9 +23,9 @@
 
 Дана матрица `A` размером `R × C`, представленная в виде вектора в порядке row-major. R - число строк, C - число столбцов. Нужно вычислить:
 
-\[
+$$
 S_j = \sum_{i=1}^{R} A_{i,j},\quad j = 1..C
-\]
+$$
 
 **Входные данные**
 
@@ -37,7 +37,7 @@ S_j = \sum_{i=1}^{R} A_{i,j},\quad j = 1..C
 - `OutType = vector<double>` of size `columns`
 
 Особенности: 
-- Матрица помещается в память
+
 - Элементы имеют тип `double`
 - Входной формат проверяется перед вычислением 
 
@@ -53,18 +53,16 @@ result[column] += A[row][column]
 
 Временная сложность:
 
-\[
+$$
 O(R \cdot C)
-\]
+$$
 
 Использование памяти:
 
 - Входная матрица: `R*C*sizeof(double)`
 - Выходные данные: `C*sizeof(double)`
 
-Для performance тестов размер матрицы был:
-
--**4000 x 4000 (16,000,000 элементов)**
+Для performance тестов размер матрицы был: **4000 x 4000 (16,000,000 элементов)**
 
 ---
 
@@ -72,7 +70,7 @@ O(R \cdot C)
 
 ## Стратегия
 
-Данные матрицы **передаются** всем MPI процессам
+Данные матрицы **передаются** всем MPI процессам.
 Каждый процесс обрабатывает **непересекающееся подмножество столбцов**:
 
 - `columns_per_proc = columns / world_size`
@@ -80,15 +78,15 @@ O(R \cdot C)
 
 Каждый процесс вычисляет частичные суммы для своих локальных столбцов: 
 
-\[
+$$
 S^{(rank)}_j = \sum_{i=1}^{R} A_{i,j}
-\]
+$$
 
 Затем происходит сбор результатов с помощью **MPI_Gatherv** в процессе с рангом 0, получая полный выходной вектор:
 
-\[
+$$
 S = \bigcup_{rank=0}^{P-1} S^{(rank)}
-\]
+$$
 
 В конце результат **передаётся** всем процессам.
 
@@ -106,11 +104,11 @@ S = \bigcup_{rank=0}^{P-1} S^{(rank)}
 
 ## Структура кода
 
-common/include/common.hpp — InType, OutType, формат входных и выходных данных 
-seq/src/ops_seq.cpp — реализация последовательного алгоритма (SEQ)
-mpi/src/ops_mpi.cpp — реализация паралелльного алгоритма (MPI)
-tests/functional/main.cpp — functional tests
-tests/performance/main.cpp — performance tests
+common/include/common.hpp — InType, OutType, формат входных и выходных данных  
+seq/src/ops_seq.cpp — реализация последовательного алгоритма (SEQ)  
+mpi/src/ops_mpi.cpp — реализация паралелльного алгоритма (MPI)  
+tests/functional/main.cpp — functional tests  
+tests/performance/main.cpp — performance tests  
 
 ## Классы
 
@@ -128,10 +126,10 @@ tests/performance/main.cpp — performance tests
 ## 6. Окружение
 
 ### Hardware
-- CPU: <Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz>  
+- CPU: Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz  
 - Cores: 6  
-- RAM: <32 GB>  
-- OS: <Windows 10 Pro>
+- RAM: 32 GB  
+- OS: Windows 10 Pro
 
 ### Toolchain
 - Compiler: `C++20`   
@@ -140,7 +138,7 @@ tests/performance/main.cpp — performance tests
 
 ### Environment variables
 
-PPC_NUM_THREADS = 1
+PPC_NUM_THREADS = 1    
 PPC_NUM_PROCS = 4 (для запуска с использованием MPI)
 
 ## Данные
@@ -201,7 +199,7 @@ PPC_NUM_PROCS = 4 (для запуска с использованием MPI)
 ## 8. Выводы
 
 - Задача "Сумма значений по столбцам матрицы" **не подходит для распараллеливания MPI** на одном узле с общей памятью.
-- Последовательная реализация является высокоэффективной и превосходит MPI по производительности из-за отсутствия затрат на связь.
+- Последовательная реализация является высокоэффективной и превосходит MPI по производительности из-за отсутствия затрат на коммуникацию.
 - Версия MPI демонстрирует **очень низкое ускорение (0,08–0,15)** и низкую эффективность из-за:
   - большого количества операций передачи,
   - низкого соотношения вычислений к передаче данных,
@@ -219,8 +217,76 @@ PPC_NUM_PROCS = 4 (для запуска с использованием MPI)
 
 ---
 
-## 10. Приложение. Код MPI реализации (`RunImpl`)
+## 10. Приложение. Код MPI реализации
 ```cpp
+
+#pragma once
+
+#include "task/include/task.hpp"
+#include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
+
+namespace zenin_a_sum_values_by_columns_matrix {
+
+class ZeninASumValuesByColumnsMatrixMPI : public BaseTask {
+ public:
+  static constexpr ppc::task::TypeOfTask GetStaticTypeOfTask() {
+    return ppc::task::TypeOfTask::kMPI;
+  }
+  explicit ZeninASumValuesByColumnsMatrixMPI(const InType &in);
+
+ private:
+  bool ValidationImpl() override;
+  bool PreProcessingImpl() override;
+  bool RunImpl() override;
+  bool PostProcessingImpl() override;
+
+  std::tuple<size_t, size_t> CalculateProcessColumns(int rank, int world_size, size_t columns);
+  void CalculateLocalSums(const std::vector<double>& matrix_data, size_t columns,
+                         size_t total_rows, size_t start_column, 
+                         size_t cols_this_process, std::vector<double>& local_sums);
+  void PrepareGathervParameters(int world_size, size_t base_cols_per_process,
+                               size_t remain, std::vector<int>& recv_counts,
+                               std::vector<int>& displacements);
+
+};
+
+}  // namespace zenin_a_sum_values_by_columns_matrix
+
+std::tuple<size_t, size_t> ZeninASumValuesByColumnsMatrixMPI::CalculateProcessColumns(int rank, int world_size, size_t columns) {
+  size_t base_cols_per_process = columns / world_size;
+  size_t remain = columns % world_size;
+
+  size_t start_column = rank * base_cols_per_process;
+  size_t cols_this_process = base_cols_per_process;
+
+  if (rank == world_size - 1) {
+    cols_this_process += remain;
+  }
+  return {start_column, cols_this_process};
+}
+
+void ZeninASumValuesByColumnsMatrixMPI::CalculateLocalSums(const std::vector<double> &matrix_data, 
+  size_t columns, size_t total_rows, size_t start_column, size_t cols_this_process, std::vector<double> &local_sums) {
+  for (size_t local_column = 0; local_column < cols_this_process; ++local_column) {
+    size_t global_col = start_column + local_column;
+    for (size_t row = 0; row < total_rows; ++row) {
+      local_sums[local_column] += matrix_data[(row * columns) + global_col];
+    }
+  }
+}
+
+void ZeninASumValuesByColumnsMatrixMPI::PrepareGathervParameters(int world_size, size_t base_cols_per_process, 
+  size_t remain, std::vector<int> &recv_counts, std::vector<int> &displacements) {
+  for (int i = 0; i < world_size; ++i) {
+    recv_counts[i] = static_cast<int>(base_cols_per_process);
+    if (i == world_size - 1) {
+      recv_counts[i] += static_cast<int>(remain);
+    }
+    if (i > 0) {
+      displacements[i] = displacements[i - 1] + recv_counts[i - 1];
+    }
+  }
+}
 
 bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   auto &input = GetInput();
@@ -245,22 +311,9 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
 
   MPI_Bcast(&columns, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
   MPI_Bcast(&total_rows, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+
   if (columns == 0) {
     return false;
-  }
-
-  size_t base_cols_per_process = columns / world_size;
-  size_t remain = columns % world_size;
-
-  size_t start_column = 0;
-  size_t cols_this_process = 0;
-
-  if (rank == world_size - 1) {
-    start_column = rank * base_cols_per_process;
-    cols_this_process = base_cols_per_process + remain;
-  } else {
-    start_column = rank * base_cols_per_process;
-    cols_this_process = base_cols_per_process;
   }
 
   if (rank != 0) {
@@ -268,40 +321,29 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   }
   MPI_Bcast(matrix_data.data(), static_cast<int>(matrix_data.size()), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+  auto [start_column, cols_this_process] = CalculateProcessColumns(rank, world_size, columns);
   std::vector<double> local_sums(cols_this_process, 0.0);
-
-  for (size_t local_column = 0; local_column < cols_this_process; ++local_column) {
-    size_t global_col = start_column + local_column;
-    for (size_t row = 0; row < total_rows; ++row) {
-      local_sums[local_column] += matrix_data[row * columns + global_col];
-    }
-  }
+  CalculateLocalSums(matrix_data, columns, total_rows, start_column, cols_this_process, local_sums);
 
   std::vector<double> global_sums;
   if (rank == 0) {
     global_sums.resize(columns, 0.0);
   }
 
+  size_t base_cols_per_process = columns / world_size;
+  size_t remain = columns % world_size;
+
   std::vector<int> recv_counts(world_size, 0);
   std::vector<int> displacements(world_size, 0);
 
   if (rank == 0) {
-    for (int i = 0; i < world_size; ++i) {
-      if (i == world_size - 1) {
-        recv_counts[i] = static_cast<int>(base_cols_per_process + remain);
-      } else {
-        recv_counts[i] = static_cast<int>(base_cols_per_process);
-      }
-
-      if (i > 0) {
-        displacements[i] = displacements[i - 1] + recv_counts[i - 1];
-      }
-    }
+    PrepareGathervParameters(world_size, base_cols_per_process, remain, recv_counts, displacements);
   }
 
   MPI_Gatherv(local_sums.data(), static_cast<int>(local_sums.size()), MPI_DOUBLE, global_sums.data(),
               recv_counts.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+  
   if (rank != 0) {
     global_sums.resize(columns);
   }

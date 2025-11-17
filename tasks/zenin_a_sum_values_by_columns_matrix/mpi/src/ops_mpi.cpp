@@ -31,7 +31,8 @@ bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
   return true;
 }
 
-std::tuple<size_t, size_t> ZeninASumValuesByColumnsMatrixMPI::CalculateProcessColumns(int rank, int world_size, size_t columns) {
+std::tuple<size_t, size_t> ZeninASumValuesByColumnsMatrixMPI::CalculateProcessColumns(int rank, int world_size,
+                                                                                      size_t columns) {
   size_t base_cols_per_process = columns / world_size;
   size_t remain = columns % world_size;
 
@@ -44,8 +45,9 @@ std::tuple<size_t, size_t> ZeninASumValuesByColumnsMatrixMPI::CalculateProcessCo
   return {start_column, cols_this_process};
 }
 
-void ZeninASumValuesByColumnsMatrixMPI::CalculateLocalSums(const std::vector<double> &matrix_data, 
-  size_t columns, size_t total_rows, size_t start_column, size_t cols_this_process, std::vector<double> &local_sums) {
+void ZeninASumValuesByColumnsMatrixMPI::CalculateLocalSums(const std::vector<double> &matrix_data, size_t columns,
+                                                           size_t total_rows, size_t start_column,
+                                                           size_t cols_this_process, std::vector<double> &local_sums) {
   for (size_t local_column = 0; local_column < cols_this_process; ++local_column) {
     size_t global_col = start_column + local_column;
     for (size_t row = 0; row < total_rows; ++row) {
@@ -54,8 +56,9 @@ void ZeninASumValuesByColumnsMatrixMPI::CalculateLocalSums(const std::vector<dou
   }
 }
 
-void ZeninASumValuesByColumnsMatrixMPI::PrepareGathervParameters(int world_size, size_t base_cols_per_process, 
-  size_t remain, std::vector<int> &recv_counts, std::vector<int> &displacements) {
+void ZeninASumValuesByColumnsMatrixMPI::PrepareGathervParameters(int world_size, size_t base_cols_per_process,
+                                                                 size_t remain, std::vector<int> &recv_counts,
+                                                                 std::vector<int> &displacements) {
   for (int i = 0; i < world_size; ++i) {
     recv_counts[i] = static_cast<int>(base_cols_per_process);
     if (i == world_size - 1) {
@@ -122,7 +125,6 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   MPI_Gatherv(local_sums.data(), static_cast<int>(local_sums.size()), MPI_DOUBLE, global_sums.data(),
               recv_counts.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-  
   if (rank != 0) {
     global_sums.resize(columns);
   }
