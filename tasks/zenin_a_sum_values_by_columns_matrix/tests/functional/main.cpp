@@ -93,8 +93,8 @@ TEST_P(ZeninASumValuesByMatrixFunctTests, SumByColumnsTest) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 5> kTestParam = {std::string("matrix1"), std::string("matrix2"), std::string("matrix3"),
-                                            std::string("matrix4"), std::string("matrix5")};
+const std::array<TestType, 6> kTestParam = {std::string("matrix1"), std::string("matrix2"), std::string("matrix3"),
+                                            std::string("matrix4"), std::string("matrix5"), std::string("matrix6")};
 
 const auto kTestTasksList = std::tuple_cat(ppc::util::AddFuncTask<ZeninASumValuesByColumnsMatrixMPI, InType>(
                                                kTestParam, PPC_SETTINGS_zenin_a_sum_values_by_columns_matrix),
