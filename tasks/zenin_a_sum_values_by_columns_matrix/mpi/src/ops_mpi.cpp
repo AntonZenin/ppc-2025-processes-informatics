@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstddef>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
@@ -33,25 +32,14 @@ bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
   return true;
 }
 
-void ZeninASumValuesByColumnsMatrixMPI::ComputeSendCountsAndDispls(size_t base, size_t rest, size_t rows,
-                                                                   int world_size, std::vector<int> &sendcounts,
-                                                                   std::vector<int> &displs) {
-  int offset = 0;
-  for (size_t proc = 0; proc < static_cast<size_t>(world_size); proc++) {
-    size_t pc = base + (proc < rest ? 1 : 0);
-    sendcounts[proc] = static_cast<int>(pc * rows);
-    displs[proc] = offset;
-    offset += sendcounts[proc];
-  }
-}
-
 void ZeninASumValuesByColumnsMatrixMPI::FillSendBuffer(const std::vector<double> &mat, std::vector<double> &sendbuf,
                                                        size_t rows, size_t cols, size_t base, size_t rest,
                                                        int world_size) {
   size_t pos = 0;
-  for (size_t proc = 0; proc < static_cast<size_t>(world_size); proc++) {
-    size_t pc_begin = (proc * base) + (proc < rest ? proc : rest);
-    size_t pc_end = pc_begin + (base + (proc < rest ? 1 : 0));
+  for (int proc = 0; proc < world_size; proc++) {
+    size_t pc_begin =
+        (static_cast<size_t>(proc) * base) + (static_cast<size_t>(proc) < rest ? static_cast<size_t>(proc) : rest);
+    size_t pc_end = pc_begin + (base + (static_cast<size_t>(proc) < rest ? 1 : 0));
     for (size_t col = pc_begin; col < pc_end; col++) {
       for (size_t row = 0; row < rows; row++) {
         sendbuf[pos++] = mat[(row * cols) + col];
@@ -60,18 +48,9 @@ void ZeninASumValuesByColumnsMatrixMPI::FillSendBuffer(const std::vector<double>
   }
 }
 
-void ZeninASumValuesByColumnsMatrixMPI::ComputeLocalSum(const std::vector<double> &local_block,
-                                                        std::vector<double> &local_sum, size_t rows, size_t my_cols) {
-  for (size_t col_id = 0; col_id < my_cols; col_id++) {
-    for (size_t row_id = 0; row_id < rows; row_id++) {
-      local_sum[col_id] += local_block[(col_id * rows) + row_id];
-    }
-  }
-}
-
 bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
-  size_t rows = static_cast<size_t>(std::get<0>(GetInput()));
-  size_t cols = static_cast<size_t>(std::get<1>(GetInput()));
+  auto rows = static_cast<size_t>(std::get<0>(GetInput()));
+  auto cols = static_cast<size_t>(std::get<1>(GetInput()));
   const std::vector<double> &mat = std::get<2>(GetInput());
 
   std::vector<double> &global_sum = GetOutput();
@@ -85,12 +64,18 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   const size_t base = cols / static_cast<size_t>(world_size);
   const size_t rest = cols % static_cast<size_t>(world_size);
 
-  const size_t my_cols = base + (std::cmp_less(static_cast<size_t>(rank), rest) ? 1 : 0);
+  const size_t my_cols = base + (static_cast<size_t>(rank) < rest ? 1 : 0);
 
   std::vector<int> sendcounts(static_cast<size_t>(world_size));
   std::vector<int> displs(static_cast<size_t>(world_size));
   if (rank == 0) {
-    ComputeSendCountsAndDispls(base, rest, rows, world_size, sendcounts, displs);
+    int offset = 0;
+    for (int proc = 0; proc < world_size; proc++) {
+      size_t pc = base + (static_cast<size_t>(proc) < rest ? 1 : 0);
+      sendcounts[proc] = static_cast<int>(pc * rows);
+      displs[proc] = offset;
+      offset += sendcounts[proc];
+    }
   }
 
   std::vector<double> sendbuf;
@@ -103,14 +88,18 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
                static_cast<int>(local_block.size()), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   std::vector<double> local_sum(my_cols, 0.0);
-  ComputeLocalSum(local_block, local_sum, rows, my_cols);
+  for (size_t col_id = 0; col_id < my_cols; col_id++) {
+    for (size_t row_id = 0; row_id < rows; row_id++) {
+      local_sum[col_id] += local_block[(col_id * rows) + row_id];
+    }
+  }
   std::vector<int> recvcounts(static_cast<size_t>(world_size));
   std::vector<int> recvdispls(static_cast<size_t>(world_size));
 
   if (rank == 0) {
     size_t offset = 0;
-    for (size_t proc = 0; proc < static_cast<size_t>(world_size); proc++) {
-      size_t pc = base + (proc < rest ? 1 : 0);
+    for (int proc = 0; proc < world_size; proc++) {
+      size_t pc = base + (static_cast<size_t>(proc) < rest ? 1 : 0);
       recvcounts[proc] = static_cast<int>(pc);
       recvdispls[proc] = static_cast<int>(offset);
       offset += pc;
