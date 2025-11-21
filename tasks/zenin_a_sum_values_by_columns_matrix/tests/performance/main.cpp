@@ -17,53 +17,28 @@
 namespace zenin_a_sum_values_by_columns_matrix {
 
 class ZeninASumValuesByMatrixPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
+  const size_t rows = 6000;
+  const size_t cols = 6000;
   InType input_data_;
 
   void SetUp() override {
-    std::string input_data_source =
-        ppc::util::GetAbsoluteTaskPath(PPC_ID_zenin_a_sum_values_by_columns_matrix, "mat_perf.txt");
-
-    std::ifstream file(input_data_source);
-    if (!file.is_open()) {
-      throw std::runtime_error("Error while opening file: " + input_data_source);
+    std::vector<double> mat(rows * cols);
+    for (size_t i = 0; i < rows; i++) {
+      for (size_t j = 0; j < cols; j++) {
+        mat[i * cols + j] = static_cast<double>((i + j) % 1000);
+      }
     }
-    size_t rows = 0;
-    size_t columns = 0;
-    std::vector<double> input;
-    file >> rows;
-    file >> columns;
-    double value = 0.0;
-    while (file >> value) {
-      input.push_back(value);
-    }
-    if (input.size() != rows * columns) {
-      throw std::runtime_error("Invalid matrix data");
-    }
-    input_data_ = std::make_tuple(rows, columns, input);
-    file.close();
+    input_data_ = std::make_tuple(rows, cols, std::move(mat));
   }
-
   bool CheckTestOutputData(OutType &output_data) final {
-    bool res = true;
-    size_t columns = std::get<1>(input_data_);
-    const std::vector<double> &matrix_data = std::get<2>(input_data_);
-    size_t rows = std::get<0>(input_data_);
-    if (output_data.size() != columns) {
-      res = false;
-      return res;
-    }
-    std::vector<double> expected_sums(columns, 0.0);
-    for (size_t row = 0; row < rows; ++row) {
-      for (size_t column = 0; column < columns; ++column) {
-        expected_sums[column] += matrix_data[(row * columns) + column];
+    std::vector<double> expected(cols, 0.0);
+    const auto &mat = std::get<2>(input_data_);
+    for (size_t j = 0; j < cols; j++) {
+      for (size_t i = 0; i < rows; i++) {
+        expected[j] += mat[(i * cols) + j];
       }
     }
-    for (size_t column = 0; column < columns; ++column) {
-      if (std::abs(output_data[column] - expected_sums[column]) > 1e-12) {
-        return false;
-      }
-    }
-    return true;
+    return (output_data == expected);
   }
 
   InType GetTestInputData() final {
