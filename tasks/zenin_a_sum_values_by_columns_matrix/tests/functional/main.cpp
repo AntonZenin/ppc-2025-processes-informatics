@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
-#include <mpi.h>
+
 #include <stb/stb_image.h>
 
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <fstream>
-#include <stdexcept>
+
+
 #include <string>
 #include <tuple>
 #include <vector>
@@ -33,7 +33,7 @@ class ZeninASumValuesByMatrixFunctTests : public ppc::util::BaseRunFuncTests<InT
     std::vector<double> mat(rows * cols);
     for (size_t i = 0; i < rows; i++) {
       for (size_t j = 0; j < cols; j++) {
-        mat[i * cols + j] = (static_cast<double>(i) + j) * 0.5;
+        mat[(i * cols) + j] = (static_cast<double>(i) + static_cast<double>(j)) * 0.5;
       }
     }
     input_data_ = std::make_tuple(rows, cols, mat);
