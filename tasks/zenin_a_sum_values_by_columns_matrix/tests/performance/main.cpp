@@ -3,8 +3,8 @@
 #include <cmath>
 #include <cstddef>
 #include <tuple>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "util/include/perf_test_util.hpp"
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"

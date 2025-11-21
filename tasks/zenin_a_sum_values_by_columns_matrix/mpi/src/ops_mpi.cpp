@@ -1,10 +1,11 @@
 #include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
 
 #include <mpi.h>
-#include <utility>
+
 #include <cmath>
 #include <cstddef>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
@@ -48,7 +49,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   size_t base = cols / size;
   size_t rest = cols % size;
 
-  size_t my_cols = base + (std::cmp_less(rank, static_cast<int>(rest)) ? 1 : 0); 
+  size_t my_cols = base + (std::cmp_less(rank, static_cast<int>(rest)) ? 1 : 0);
 
   std::vector<int> sendcounts(size);
   std::vector<int> displs(size);
@@ -96,8 +97,8 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
     }
     global_sum.assign(cols, 0.0);
   }
-  MPI_Gatherv(local_sum.data(), static_cast<int>(my_cols), MPI_DOUBLE, global_sum.data(), recvcounts.data(), recvdispls.data(),
-              MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(local_sum.data(), static_cast<int>(my_cols), MPI_DOUBLE, global_sum.data(), recvcounts.data(),
+              recvdispls.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
   global_sum.resize(cols);
   MPI_Bcast(global_sum.data(), static_cast<int>(cols), MPI_DOUBLE, 0, MPI_COMM_WORLD);
   return true;
