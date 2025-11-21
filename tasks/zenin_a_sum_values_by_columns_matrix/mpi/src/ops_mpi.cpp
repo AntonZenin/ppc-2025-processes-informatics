@@ -1,7 +1,7 @@
 #include "zenin_a_sum_values_by_columns_matrix/mpi/include/ops_mpi.hpp"
 
 #include <mpi.h>
-
+#include <utility>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
@@ -48,17 +48,17 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   size_t base = cols / size;
   size_t rest = cols % size;
 
-  size_t my_cols = base + ((size_t)rank < rest ? 1 : 0);
+  size_t my_cols = base + (std::cmp_less(rank, static_cast<int>(rest)) ? 1 : 0); 
 
   std::vector<int> sendcounts(size);
   std::vector<int> displs(size);
   if (rank == 0) {
     int offset = 0;
-    for (size_t p = 0; p < (size_t)size; p++) {
-      size_t pc = base + (p < rest ? 1 : 0);
-      sendcounts[p] = (int)(pc * rows);
-      displs[p] = offset;
-      offset += sendcounts[p];
+    for (size_t proc = 0; proc < (size_t)size; proc++) {
+      size_t pc = base + (proc < rest ? 1 : 0);
+      sendcounts[proc] = (int)(pc * rows);
+      displs[proc] = offset;
+      offset += sendcounts[proc];
     }
   }
 
@@ -87,19 +87,19 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   }
   std::vector<int> recvcounts(size), recvdispls(size);
   if (rank == 0) {
-    int offset = 0;
+    size_t offset = 0;
     for (size_t p = 0; p < (size_t)size; p++) {
       size_t pc = base + (p < rest ? 1 : 0);
-      recvcounts[p] = (int)pc;
-      recvdispls[p] = offset;
+      recvcounts[p] = static_cast<int>(pc);
+      recvdispls[p] = static_cast<int>(offset);
       offset += pc;
     }
     global_sum.assign(cols, 0.0);
   }
-  MPI_Gatherv(local_sum.data(), (int)my_cols, MPI_DOUBLE, global_sum.data(), recvcounts.data(), recvdispls.data(),
+  MPI_Gatherv(local_sum.data(), static_cast<int>(my_cols), MPI_DOUBLE, global_sum.data(), recvcounts.data(), recvdispls.data(),
               MPI_DOUBLE, 0, MPI_COMM_WORLD);
   global_sum.resize(cols);
-  MPI_Bcast(global_sum.data(), (int)cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast(global_sum.data(), static_cast<int>(cols), MPI_DOUBLE, 0, MPI_COMM_WORLD);
   return true;
 }
 
