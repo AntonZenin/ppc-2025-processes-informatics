@@ -48,7 +48,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   size_t base = cols / size;
   size_t rest = cols % size;
 
-  size_t my_cols = base + (rank < rest ? 1 : 0);
+  size_t my_cols = base + ((size_t)rank < rest ? 1 : 0);
 
   std::vector<int> sendcounts(size);
   std::vector<int> displs(size);
@@ -66,7 +66,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   if (rank == 0) {
     sendbuf.resize(rows * cols);
     size_t pos = 0;
-    for (int p = 0; p < (size_t)size; p++) {
+    for (size_t p = 0; p < (size_t)size; p++) {
       size_t pc_begin = p * base + (p < rest ? p : rest);
       size_t pc_end = pc_begin + (base + (p < rest ? 1 : 0));
       for (size_t col = pc_begin; col < pc_end; col++) {
