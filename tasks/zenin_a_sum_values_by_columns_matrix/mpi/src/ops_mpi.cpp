@@ -2,6 +2,7 @@
 
 #include <mpi.h>
 
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
@@ -19,8 +20,15 @@ ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InTyp
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  auto &input = GetInput();
-  return ((std::get<0>(input)) * std::get<1>(input) == std::get<2>(input).size() && (GetOutput().empty()));
+  const auto &[rows, cols, matrix] = GetInput();
+
+  if (rows == 0 || cols == 0) {
+    return false;
+  }
+  if (matrix.size() != rows * cols) {
+    return false;
+  }
+  return true;
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
@@ -98,6 +106,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   std::vector<int> recvdispls(static_cast<size_t>(world_size));
 
   if (rank == 0) {
+    assert(rows != 0);
     size_t offset = 0;
     for (int proc = 0; proc < world_size; proc++) {
       recvcounts[proc] = sendcounts[proc] / static_cast<int>(rows);
