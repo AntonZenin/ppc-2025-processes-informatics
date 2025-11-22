@@ -2,9 +2,9 @@
 
 #include <mpi.h>
 
-#include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -105,8 +105,11 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   std::vector<int> recvcounts(static_cast<size_t>(world_size));
   std::vector<int> recvdispls(static_cast<size_t>(world_size));
 
+  if (rows == 0) {
+    throw std::runtime_error("Matrix has zero rows");
+  }
+
   if (rank == 0) {
-    assert(rows != 0);
     size_t offset = 0;
     for (int proc = 0; proc < world_size; proc++) {
       recvcounts[proc] = sendcounts[proc] / static_cast<int>(rows);
