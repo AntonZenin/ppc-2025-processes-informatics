@@ -38,7 +38,7 @@ void ZeninASumValuesByColumnsMatrixMPI::FillSendBuffer(const std::vector<double>
                                                        int world_size) {
   size_t pos = 0;
   for (int proc = 0; proc < world_size; proc++) {
-    size_t proc_size = static_cast<size_t>(proc);
+    auto proc_size = static_cast<size_t>(proc);
     size_t pc_begin = (proc_size * base) + (std::cmp_less(proc_size, rest) ? proc_size : rest);
     size_t pc_end = pc_begin + (base + (std::cmp_less(proc_size, rest) ? 1 : 0));
     for (size_t col = pc_begin; col < pc_end; col++) {
@@ -100,13 +100,13 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   if (rank == 0) {
     size_t offset = 0;
     for (int proc = 0; proc < world_size; proc++) {
-      size_t pc = base + (std::cmp_less(static_cast<size_t>(proc), rest) ? 1 : 0);
-      recvcounts[proc] = static_cast<int>(pc);
+      recvcounts[proc] = sendcounts[proc] / static_cast<int>(rows);
       recvdispls[proc] = static_cast<int>(offset);
-      offset += pc;
+      offset += static_cast<size_t>(recvcounts[proc]);
     }
     global_sum.assign(cols, 0.0);
   }
+
   MPI_Gatherv(local_sum.data(), static_cast<int>(my_cols), MPI_DOUBLE, global_sum.data(), recvcounts.data(),
               recvdispls.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
   global_sum.resize(cols);
