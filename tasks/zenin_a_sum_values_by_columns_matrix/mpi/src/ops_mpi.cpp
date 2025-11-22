@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "zenin_a_sum_values_by_columns_matrix/common/include/common.hpp"
@@ -37,9 +38,9 @@ void ZeninASumValuesByColumnsMatrixMPI::FillSendBuffer(const std::vector<double>
                                                        int world_size) {
   size_t pos = 0;
   for (int proc = 0; proc < world_size; proc++) {
-    size_t pc_begin =
-        (static_cast<size_t>(proc) * base) + (static_cast<size_t>(proc) < rest ? static_cast<size_t>(proc) : rest);
-    size_t pc_end = pc_begin + (base + (static_cast<size_t>(proc) < rest ? 1 : 0));
+    size_t proc_size = static_cast<size_t>(proc);
+    size_t pc_begin = (proc_size * base) + (std::cmp_less(proc_size, rest) ? proc_size : rest);
+    size_t pc_end = pc_begin + (base + (std::cmp_less(proc_size, rest) ? 1 : 0));
     for (size_t col = pc_begin; col < pc_end; col++) {
       for (size_t row = 0; row < rows; row++) {
         sendbuf[pos++] = mat[(row * cols) + col];
@@ -64,14 +65,14 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   const size_t base = cols / static_cast<size_t>(world_size);
   const size_t rest = cols % static_cast<size_t>(world_size);
 
-  const size_t my_cols = base + (static_cast<size_t>(rank) < rest ? 1 : 0);
+  const size_t my_cols = base + (std::cmp_less(static_cast<size_t>(rank), rest) ? 1 : 0);
 
   std::vector<int> sendcounts(static_cast<size_t>(world_size));
   std::vector<int> displs(static_cast<size_t>(world_size));
   if (rank == 0) {
     int offset = 0;
     for (int proc = 0; proc < world_size; proc++) {
-      size_t pc = base + (static_cast<size_t>(proc) < rest ? 1 : 0);
+      size_t pc = base + (std::cmp_less(static_cast<size_t>(proc), rest) ? 1 : 0);
       sendcounts[proc] = static_cast<int>(pc * rows);
       displs[proc] = offset;
       offset += sendcounts[proc];
@@ -99,7 +100,7 @@ bool ZeninASumValuesByColumnsMatrixMPI::RunImpl() {
   if (rank == 0) {
     size_t offset = 0;
     for (int proc = 0; proc < world_size; proc++) {
-      size_t pc = base + (static_cast<size_t>(proc) < rest ? 1 : 0);
+      size_t pc = base + (std::cmp_less(static_cast<size_t>(proc), rest) ? 1 : 0);
       recvcounts[proc] = static_cast<int>(pc);
       recvdispls[proc] = static_cast<int>(offset);
       offset += pc;
