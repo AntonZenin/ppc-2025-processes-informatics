@@ -20,15 +20,8 @@ ZeninASumValuesByColumnsMatrixMPI::ZeninASumValuesByColumnsMatrixMPI(const InTyp
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::ValidationImpl() {
-  const auto &[rows, cols, matrix] = GetInput();
-
-  if (rows == 0 || cols == 0) {
-    return false;
-  }
-  if (matrix.size() != rows * cols) {
-    return false;
-  }
-  return true;
+  auto &input = GetInput();
+  return ((std::get<0>(input)) * std::get<1>(input) == std::get<2>(input).size() && (GetOutput().empty()));
 }
 
 bool ZeninASumValuesByColumnsMatrixMPI::PreProcessingImpl() {
